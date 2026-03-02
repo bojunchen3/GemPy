@@ -13,6 +13,9 @@ module PE #(
 );
 
     reg [31:0] matrix_val;
+    wire [47:0] temp;
+
+    assign temp = (matrix_val * top_in) >>> 22; // 16+6=22 
 
     always @(posedge clk or negedge aresetn) begin
         if (!aresetn) begin
@@ -20,7 +23,7 @@ module PE #(
             down_out    <= 0;
         end
         else begin
-          partial_out <= left_in + ((matrix_val * top_in) >>> 16);
+          partial_out <= left_in + temp;
           down_out    <= top_in;  // no change 
         end
     end

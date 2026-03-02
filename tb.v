@@ -184,15 +184,15 @@ module tb;
     vec_vals[ORI_NUM+INT_NUM+1][4*DATA_WIDTH-1: 3*DATA_WIDTH] =    1;
     vec_vals[ORI_NUM+INT_NUM+2][  DATA_WIDTH-1:            0] =  500; // unuse layer
     vec_vals[ORI_NUM+INT_NUM+2][2*DATA_WIDTH-1:   DATA_WIDTH] =  500;
-    vec_vals[ORI_NUM+INT_NUM+2][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1200;
+    vec_vals[ORI_NUM+INT_NUM+2][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1000;
     vec_vals[ORI_NUM+INT_NUM+2][4*DATA_WIDTH-1: 3*DATA_WIDTH] =    1;
     vec_vals[ORI_NUM+INT_NUM+3][  DATA_WIDTH-1:            0] =  500;
     vec_vals[ORI_NUM+INT_NUM+3][2*DATA_WIDTH-1:   DATA_WIDTH] =  500;
-    vec_vals[ORI_NUM+INT_NUM+3][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1200;
+    vec_vals[ORI_NUM+INT_NUM+3][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1000;
     vec_vals[ORI_NUM+INT_NUM+3][4*DATA_WIDTH-1: 3*DATA_WIDTH] =    1;
     vec_vals[ORI_NUM+INT_NUM+4][  DATA_WIDTH-1:            0] =  500;
     vec_vals[ORI_NUM+INT_NUM+4][2*DATA_WIDTH-1:   DATA_WIDTH] =  500;
-    vec_vals[ORI_NUM+INT_NUM+4][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1200;
+    vec_vals[ORI_NUM+INT_NUM+4][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1000;
     vec_vals[ORI_NUM+INT_NUM+4][4*DATA_WIDTH-1: 3*DATA_WIDTH] =    1;
 
     // vec_vals[VEC_NUM-3][  DATA_WIDTH-1:            0] =  25; // input
@@ -220,6 +220,10 @@ module tb;
     vec_vals[VEC_NUM-1][2*DATA_WIDTH-1:   DATA_WIDTH] =   0;
     vec_vals[VEC_NUM-1][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 200;
     vec_vals[VEC_NUM-1][4*DATA_WIDTH-1: 3*DATA_WIDTH] =   1;
+
+    for (i=0; i < VEC_NUM; i=i+1) begin
+      vec_vals[i] = vec_vals[i] <<< 6;
+    end
 
     /*
     for (i=7; i<12; i=i+1) begin
