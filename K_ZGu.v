@@ -1,29 +1,29 @@
 module K_ZGu #(
-  parameter integer DATA_WIDTH = 16,
-  parameter integer DIFF_DELAY = 24
+  parameter integer WIDTH = 19,
+  parameter integer DIFF_DELAY = 20
 )(
   input  wire                         clk,
-  input  wire signed [DATA_WIDTH-1:0] ori_x,
-  input  wire signed [DATA_WIDTH-1:0] ori_y,
-  input  wire signed [DATA_WIDTH-1:0] ori_z,
-  input  wire signed [DATA_WIDTH-1:0] normalize_x,
-  input  wire signed [DATA_WIDTH-1:0] normalize_y,
-  input  wire signed [DATA_WIDTH-1:0] normalize_z,
+  input  wire signed [15:0] ori_x,
+  input  wire signed [15:0] ori_y,
+  input  wire signed [15:0] ori_z,
+  input  wire signed [15:0] normalize_x,
+  input  wire signed [15:0] normalize_y,
+  input  wire signed [15:0] normalize_z,
   
-  output wire signed [31:0]           K_ZGx,
-  output wire signed [31:0]           K_ZGy,
-  output wire signed [31:0]           K_ZGz
+  output wire signed [31:0]   K_ZGx,
+  output wire signed [31:0]   K_ZGy,
+  output wire signed [31:0]   K_ZGz
 );
   
   integer i;
 
-  wire [DATA_WIDTH:0] diff_x = ori_x - normalize_x;
-  wire [DATA_WIDTH:0] diff_y = ori_y - normalize_y;
-  wire [DATA_WIDTH:0] diff_z = ori_z - normalize_z;
+  wire [16:0] diff_x = ori_x - normalize_x;
+  wire [16:0] diff_y = ori_y - normalize_y;
+  wire [16:0] diff_z = ori_z - normalize_z;
 
-  reg  [DATA_WIDTH:0] diff_x_r [0:DIFF_DELAY-1];
-  reg  [DATA_WIDTH:0] diff_y_r [0:DIFF_DELAY-1];
-  reg  [DATA_WIDTH:0] diff_z_r [0:DIFF_DELAY-1];
+  reg  [16:0] diff_x_r [0:DIFF_DELAY-1];
+  reg  [16:0] diff_y_r [0:DIFF_DELAY-1];
+  reg  [16:0] diff_z_r [0:DIFF_DELAY-1];
 
   always @(posedge clk) begin
     diff_x_r[0] <= diff_x;
@@ -36,28 +36,37 @@ module K_ZGu #(
     end
   end
 
-  wire [DATA_WIDTH:0] cordic_x = diff_x[16]? (~diff_x+1): diff_x; // q16
-  wire [DATA_WIDTH:0] cordic_y = diff_y[16]? (~diff_y+1): diff_y; // q16
-  wire [DATA_WIDTH:0] cordic_z = diff_z[16]? (~diff_z+1): diff_z; // q16
+  wire [16:0] cordic_x = diff_x[15]? (~diff_x+1): diff_x; // q16
+  // wire [31:0] cordic_y =  { {15{diff_y[WIDTH]}}, diff_y }; // q16
+  // wire [31:0] cordic_z =  { {15{diff_z[WIDTH]}}, diff_z }; // q16
 
-  wire [31: 0] ro;
-  CORDIC_Vector cov (
+  wire [15: 0] ro;
+  CORDIC_Vector #( .WIDTH(WIDTH)) cov(
     .clk       (clk),
     .Input_x   (cordic_x), // q16
-    .Input_y   (cordic_y), // q16
-    .Input_z   (cordic_z), // q16
+    .Input_y   (diff_y), // q16
+    .Input_z   (diff_z), // q16
     .Output_xn (ro) // q16
   );
 
-  wire [31:0] d1_q16;
+  wire signed [31:0] d1_q16;
   cubic_cov_d1 ccd (
     .clk(clk),
     .r_q16(ro), // q16
     .ans_q16(d1_q16) // q16
   );
+  
+  wire [47:0] K_ZGx_temp;
+  wire [47:0] K_ZGy_temp;
+  wire [47:0] K_ZGz_temp;
 
-  mul_q16 u_mul_x (.a($signed(d1_q16)), .b($signed(diff_x_r[DIFF_DELAY-1])), .y(K_ZGx));
-  mul_q16 u_mul_y (.a($signed(d1_q16)), .b($signed(diff_y_r[DIFF_DELAY-1])), .y(K_ZGy));
-  mul_q16 u_mul_z (.a($signed(d1_q16)), .b($signed(diff_z_r[DIFF_DELAY-1])), .y(K_ZGz));
+  assign K_ZGx_temp = $signed(d1_q16) * $signed(diff_x_r[DIFF_DELAY-1]) >>> 16;
+  assign K_ZGy_temp = $signed(d1_q16) * $signed(diff_y_r[DIFF_DELAY-1]) >>> 16;
+  assign K_ZGz_temp = $signed(d1_q16) * $signed(diff_z_r[DIFF_DELAY-1]) >>> 16;
+
+  assign K_ZGx = K_ZGx_temp;
+  assign K_ZGy = K_ZGy_temp;
+  assign K_ZGz = K_ZGz_temp;
 
 endmodule
+
