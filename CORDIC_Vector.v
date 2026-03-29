@@ -1,8 +1,8 @@
 module CORDIC_Vector #(
   parameter WIDTH = 18,
-  parameter ITER = 12
+  parameter ITER = 16
 )(
-  input              clk,
+  input         clk,
   input  [16:0] Input_x,
   input  [16:0] Input_y,
   input  [16:0] Input_z,
@@ -21,50 +21,56 @@ module CORDIC_Vector #(
     z_00 <= Input_z;
   end
   
-  reg  signed [WIDTH-1:0]       x[0: ITER-1];
-  reg  signed [WIDTH-1:0]       y[0: ITER/2-1];
-  reg  signed [WIDTH-1:0]       z[0: ITER-1];
-  wire signed [WIDTH-1:0]   x_mid[0: ITER-1];
-  wire signed [WIDTH-1:0]   y_mid[0: ITER/2-1];
-  wire signed [WIDTH-1:0]   z_mid[0: ITER-1];
+  reg  signed [WIDTH-1:0]  x[0: ITER-1];
+  reg  signed [WIDTH-1:0]  y[0: ITER/2-1];
+  reg  signed [WIDTH-1:0]  z[0: ITER-1];
+  wire signed [WIDTH-1:0]  x_mid[0: ITER-1];
+  wire signed [WIDTH-1:0]  y_mid[0: ITER/2-1];
+  wire signed [WIDTH-1:0]  z_mid[0: ITER-1];
   wire signed [WIDTH-1:0]  x_next[0: ITER-1];
   wire signed [WIDTH-1:0]  y_next[0: ITER/2-1];
   wire signed [WIDTH-1:0]  z_next[0: ITER-1];
-  reg  signed [WIDTH-1:0]  z_7_delay;
+  reg  signed [WIDTH-1:0]  z_delay;
   reg  signed [WIDTH+15:0] x_temp;
   reg  signed [WIDTH+15:0] output_temp;
 
   //--- generate operation pipeline --- 
   generate
     genvar i;
-    for (i = 0; i < ITER; i = i + 1) begin: roter    
+    for(i = 0; i < ITER; i = i + 1) begin: roter    
       if (i == 0) 
         CORDIC_Roter #(.SHIFT_BASE(i), .WIDTH(WIDTH))
-          rote00 ( .Input_x_n_1(x_00),      .Input_y_n_1(y_00),      .Input_z_n_1(z_00),
-                   .Output_x_n(x_mid[i]), .Output_y_n(y_mid[i]), .Output_z_n(z_mid[i]));
+          rote00 ( .Input_x(x_00),      .Input_y(y_00),
+                   .Output_x(x_mid[i]), .Output_y(y_mid[i]));
       else if(i < (ITER/2)) 
         CORDIC_Roter #(.SHIFT_BASE(i*2), .WIDTH(WIDTH))
-          rote01 ( .Input_x_n_1(x[i-1]),      .Input_y_n_1(y[i-1]),      .Input_z_n_1(z[i-1]),
-                   .Output_x_n(x_mid[i]), .Output_y_n(y_mid[i]), .Output_z_n(z_mid[i]));
+          rote01 ( .Input_x(x[i-1]),    .Input_y(y[i-1]),
+                   .Output_x(x_mid[i]), .Output_y(y_mid[i]));
       else if(i == (ITER/2)) begin 
         CORDIC_Roter #(.SHIFT_BASE((i-ITER/2)*2), .WIDTH(WIDTH))
-            rote02 ( .Input_x_n_1(x_temp[WIDTH+15:16]), .Input_y_n_1(z_7_delay),
-                     .Output_x_n(x_mid[i]),     .Output_y_n(z_mid[i]));
+            rote02 ( .Input_x(x_temp[WIDTH+15:16]), .Input_y(z_delay),
+                     .Output_x(x_mid[i]),           .Output_y(z_mid[i]));
       end
       else 
         CORDIC_Roter #(.SHIFT_BASE((i-ITER/2)*2), .WIDTH(WIDTH))
-          rote03 ( .Input_x_n_1(x[i-1]),      .Input_y_n_1(z[i-1]),
-                   .Output_x_n(x_mid[i]), .Output_y_n(z_mid[i]));
+          rote03 ( .Input_x(x[i-1]),    .Input_y(z[i-1]),
+                   .Output_x(x_mid[i]), .Output_y(z_mid[i]));
 
       if(i < (ITER/2))
         CORDIC_Roter #(.SHIFT_BASE(i*2+1), .WIDTH(WIDTH))
-          rote04 ( .Input_x_n_1(x_mid[i]), .Input_y_n_1(y_mid[i]), .Input_z_n_1(z_mid[i]),
-                   .Output_x_n(x_next[i]), .Output_y_n(y_next[i]), .Output_z_n(z_next[i]));
-      else if(i < ITER) begin 
+          rote04 ( .Input_x(x_mid[i]),   .Input_y(y_mid[i]),
+                   .Output_x(x_next[i]), .Output_y(y_next[i]));
+      else begin 
         CORDIC_Roter #(.SHIFT_BASE((i-ITER/2)*2+1), .WIDTH(WIDTH))
-          rote05 ( .Input_x_n_1(x_mid[i]),   .Input_y_n_1(z_mid[i]),
-                   .Output_x_n(x_next[i]), .Output_y_n(z_next[i]));
+          rote05 ( .Input_x(x_mid[i]),   .Input_y(z_mid[i]),
+                   .Output_x(x_next[i]), .Output_y(z_next[i]));
       end
+
+      if(i < (ITER/2)) begin
+        assign z_mid[i] = (i == 0) ? z_00 : z[i-1];
+        assign z_next[i] = z_mid[i];
+      end
+
     end
   endgenerate
 
@@ -85,7 +91,7 @@ module CORDIC_Vector #(
   end
 
   always @(posedge clk) begin
-    z_7_delay <= z[ITER/2-1];
+    z_delay <= z[ITER/2-1];
   end
   
   always @(posedge clk) begin
