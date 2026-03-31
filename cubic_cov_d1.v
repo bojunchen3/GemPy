@@ -1,71 +1,62 @@
 module cubic_cov_d1 #(
-  parameter integer DATA_WIDTH = 16
+  parameter integer DATA_WIDTH = 32
 )(
-    input wire                  clk,
-    input wire [DATA_WIDTH-1:0] r_q16,
+  input  wire clk,
+  input  wire [31:0] r_q32,         
 
-    output reg [35:0]           ans_q16
+  // diable register retiming for output to preserve timing
+  (* dont_touch = "yes" *) output reg signed [35:0] ans_q32  
 );
 
-  // 係數皆為 Q16 = round(coef * 65536)
-  localparam signed [31:0] C5 =  32'sd8385;   //  0.12794
-  localparam signed [31:0] C3 = -32'sd80774;  // -1.23252
-  localparam signed [31:0] C1 =  32'sd350157; //  5.34297
-  localparam signed [35:0] C0 = -36'sd20806069946; // -4.84429
-  
+  localparam signed [27:0] C5 =  28'sd2146529;     //  0.12794 * 2^24
+  localparam signed [27:0] C3 = -28'sd20678229;    // -1.23252 * 2^24
+  localparam signed [27:0] C1 =  28'sd89640122;    //  5.34297 * 2^24
+  localparam signed [27:0] C0 = -28'sd81273711;    // -4.84429 * 2^24
 
-  // -------------------------
-  // Signal Declarations
-  // -------------------------
+  wire [23:0] r_q24 = r_q32[31:8];
 
   // Stage 1 signals
-  wire [DATA_WIDTH-1:0] r2_w;
-  reg  [DATA_WIDTH-1:0] r_s1, r2_s1;
+  wire [47:0] r2_full;
+  wire [23:0] r2_w;
+  reg  [23:0] r_s1, r2_s1;
 
-  // Stage 2 signals
-  wire signed [31:0] mul2_w, add2_w;
-  reg  signed [31:0] add2_q;
-  reg  [DATA_WIDTH-1:0] r_s2, r2_s2;
-
-  // Stage 3 signals
-  wire signed [31:0] mul3_w, add3_w;
-  reg  signed [31:0] add3_q;
-  reg  [DATA_WIDTH-1:0] r_s3;
-
-  // Stage 4 signals
-  wire signed [34:0] mul4_w;
-  wire signed [35:0] add4_w;
+  // 28 bits * 25 bits = 53 bits
+  wire signed [52:0] mac2_full, mac3_full, mac4_full;
+  wire signed [27:0] add2_w, add3_w, add4_w;
+  
+  reg  signed [27:0] add2_q, add3_q;
+  reg  [23:0] r_s2, r2_s2, r_s3;
 
   // -------------------------
   // Stage 1: r2 = r*r
   // -------------------------
-  mul_q16 u_mul_r2 (.a(r_q16), .b(r_q16), .y(r2_w));
+  assign r2_full = r_q24 * r_q24; 
+  assign r2_w    = r2_full[47:24];
 
   // -------------------------
-  // Stage 2: s1 = C7*r2 + C5
+  // Stage 2: s1 = C5*r2 + C3
   // -------------------------
-  mul_q16 u_mul_t1 (.a(C5), .b(r2_s1), .y(mul2_w));
-  assign add2_w = mul2_w + C3;
+  assign mac2_full = (C5 * $signed({1'b0, r2_s1})) + (C3 <<< 24);
+  assign add2_w    = mac2_full >>> 24;
 
   // -------------------------
-  // Stage 3: s2 = s1*r2 + C3
+  // Stage 3: s2 = s1*r2 + C1
   // -------------------------
-  mul_q16 u_mul_t2 (.a(add2_q), .b(r2_s2), .y(mul3_w));
-  assign add3_w = mul3_w + C1;
+  assign mac3_full = (add2_q * $signed({1'b0, r2_s2})) + (C1 <<< 24);
+  assign add3_w    = mac3_full >>> 24;
 
   // -------------------------
-  // Stage 4: s3 = s2*r + C2
+  // Stage 4: s3 = s2*r + C0
   // -------------------------
-  // mul_q16 u_mul_t3 (.a(add3_q), .b(r_s3), .y(mul4_w));
-  assign mul4_w = $signed(add3_q) * $signed({1'b0, r_s3});
-  assign add4_w = mul4_w + C0;
+  assign mac4_full = (add3_q * $signed({1'b0, r_s3})) + (C0 <<< 24);
+  assign add4_w    = mac4_full >>> 24;
 
   // -------------------------
   // Pipeline Registers
   // -------------------------
   always @(posedge clk) begin
     // Stage1 regs
-    r_s1  <= r_q16;
+    r_s1  <= r_q24;
     r2_s1 <= r2_w;
 
     // Stage2 regs
@@ -77,8 +68,8 @@ module cubic_cov_d1 #(
     r_s3   <= r_s2;
     add3_q <= add3_w;
 
-    // Stage4 regs
-    ans_q16 <= add4_w;
+    // Stage4 regs (Output Formatting)
+    ans_q32 <= $signed({add4_w, 8'd0});
   end
 
 endmodule
