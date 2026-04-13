@@ -172,7 +172,7 @@ module process #(
       ip_vector = {LANES*DATA_WIDTH{1'b0}};
   end
 
-  reg  [15:0] input_count;
+  reg  [31:0] input_count;
   always @(posedge aclk) begin
     if(state == STREAM)
       input_count <= input_count + 1;
