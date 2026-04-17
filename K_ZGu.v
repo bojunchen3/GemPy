@@ -1,15 +1,15 @@
 module K_ZGu #(
   parameter integer WIDTH = 20,
-  parameter integer CORDIC_ITER = 16,
+  parameter integer CORDIC_ITER = 12,
   parameter integer DIFF_DELAY = CORDIC_ITER + 8
 )(
   input  wire                         clk,
-  input  wire signed [15:0] ori_x,
-  input  wire signed [15:0] ori_y,
-  input  wire signed [15:0] ori_z,
-  input  wire signed [15:0] normalize_x,
-  input  wire signed [15:0] normalize_y,
-  input  wire signed [15:0] normalize_z,
+  input  wire signed [16:0] ori_x,
+  input  wire signed [16:0] ori_y,
+  input  wire signed [16:0] ori_z,
+  input  wire signed [16:0] normalize_x,
+  input  wire signed [16:0] normalize_y,
+  input  wire signed [16:0] normalize_z,
   
   output wire signed [34:0]   K_ZGx,
   output wire signed [34:0]   K_ZGy,
@@ -18,13 +18,13 @@ module K_ZGu #(
   
   integer i;
 
-  wire [16:0] diff_x = ori_x - normalize_x;
-  wire [16:0] diff_y = ori_y - normalize_y;
-  wire [16:0] diff_z = ori_z - normalize_z;
+  wire signed [16:0] diff_x = ori_x - normalize_x;
+  wire signed [16:0] diff_y = ori_y - normalize_y;
+  wire signed [16:0] diff_z = ori_z - normalize_z;
 
-  reg  [16:0] diff_x_r [0:DIFF_DELAY-1];
-  reg  [16:0] diff_y_r [0:DIFF_DELAY-1];
-  reg  [16:0] diff_z_r [0:DIFF_DELAY-1];
+  reg  signed [16:0] diff_x_r [0:DIFF_DELAY-1];
+  reg  signed [16:0] diff_y_r [0:DIFF_DELAY-1];
+  reg  signed [16:0] diff_z_r [0:DIFF_DELAY-1];
 
   always @(posedge clk) begin
     diff_x_r[0] <= diff_x;
@@ -41,7 +41,7 @@ module K_ZGu #(
   // wire [31:0] cordic_y =  { {15{diff_y[WIDTH]}}, diff_y }; // q16
   // wire [31:0] cordic_z =  { {15{diff_z[WIDTH]}}, diff_z }; // q16
 
-  wire [31: 0] ro;
+  wire [32: 0] ro;
   CORDIC_Vector #( .WIDTH(WIDTH), .ITER(CORDIC_ITER)) cov(
     .clk       (clk),
     .Input_x   (cordic_x), // q16

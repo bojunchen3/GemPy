@@ -9,7 +9,7 @@ module SRT #(
     input  wire [31:0] a10, a11, a12, a13,
     input  wire [31:0] a20, a21, a22, a23,
     input  wire [4*DATA_WIDTH-1:0] vector,
-    output wire [OUT_WIDTH-1:0]  result0, result1, result2
+    output wire [OUT_WIDTH+1:0]  result0, result1, result2
 );
 
     // split vector into vec_in
@@ -20,8 +20,8 @@ module SRT #(
 
     // buffer
     reg [DATA_WIDTH-1:0] in_01, in_02, in_03, in_12, in_13, in_23;
-    reg [OUT_WIDTH-1:0] out_00, out_01, out_10;
-    wire [OUT_WIDTH-1:0] temp0, temp1;
+    reg [OUT_WIDTH+1:0] out_00, out_01, out_10;
+    wire [OUT_WIDTH+1:0] temp0, temp1;
     
     always @(posedge aclk or negedge aresetn) begin
       if(!aresetn) begin

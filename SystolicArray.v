@@ -14,17 +14,17 @@ module SystolicArray #(
     input  wire [DATA_WIDTH-1:0] vec_in1,  // column 1
     input  wire [DATA_WIDTH-1:0] vec_in2,  // column 2
     input  wire [DATA_WIDTH-1:0] vec_in3,  // column 3
-    output wire [OUT_WIDTH-1:0]  result0, result1, result2
+    output wire [OUT_WIDTH+1:0]  result0, result1, result2
 );
     wire [31:0] mat_val [0:2][0:3];
     assign mat_val[0][0]=a00; assign mat_val[0][1]=a01; assign mat_val[0][2]=a02; assign mat_val[0][3]=a03;
     assign mat_val[1][0]=a10; assign mat_val[1][1]=a11; assign mat_val[1][2]=a12; assign mat_val[1][3]=a13;
     assign mat_val[2][0]=a20; assign mat_val[2][1]=a21; assign mat_val[2][2]=a22; assign mat_val[2][3]=a23;
 
-    wire [OUT_WIDTH-1:0]  partial  [0:2][0:3];
+    wire [OUT_WIDTH+1:0]  partial  [0:2][0:3];
     wire [DATA_WIDTH-1:0] down_val [0:2][0:3];
     wire [DATA_WIDTH-1:0] top_in_sig  [0:2][0:3];
-    wire [OUT_WIDTH-1:0]  left_in_sig [0:2][0:3];
+    wire [OUT_WIDTH+1:0]  left_in_sig [0:2][0:3];
 
     genvar i, j;
     generate

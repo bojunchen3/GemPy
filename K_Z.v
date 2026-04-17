@@ -3,12 +3,12 @@ module K_Z #(
   parameter integer CORDIC_ITER = 16
 )(
   input  wire               clk,
-  input  wire signed [15:0] int_x,
-  input  wire signed [15:0] int_y,
-  input  wire signed [15:0] int_z,
-  input  wire signed [15:0] normalize_x,
-  input  wire signed [15:0] normalize_y,
-  input  wire signed [15:0] normalize_z,
+  input  wire signed [16:0] int_x,
+  input  wire signed [16:0] int_y,
+  input  wire signed [16:0] int_z,
+  input  wire signed [16:0] normalize_x,
+  input  wire signed [16:0] normalize_y,
+  input  wire signed [16:0] normalize_z,
   output wire signed [34:0] K_Z_out
 );
 
@@ -20,7 +20,7 @@ module K_Z #(
   // wire [31:0] cordic_y =  { {15{diff_y[WIDTH]}}, diff_y }; // q16
   // wire [31:0] cordic_z =  { {15{diff_z[WIDTH]}}, diff_z }; // q16
 
-  wire [31:0] ri;
+  wire [32:0] ri;
   CORDIC_Vector #( .WIDTH(WIDTH), .ITER(CORDIC_ITER)) cov(
     .clk       (clk),
     .Input_x   (cordic_x), // q16

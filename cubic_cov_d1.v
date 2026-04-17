@@ -2,7 +2,7 @@ module cubic_cov_d1 #(
   parameter integer DATA_WIDTH = 32
 )(
   input  wire clk,
-  input  wire [31:0] r_q32,         
+  input  wire [DATA_WIDTH:0] r_q32,         
 
   // diable register retiming for output to preserve timing
   (* dont_touch = "yes" *) output reg signed [35:0] ans_q32  
@@ -13,25 +13,25 @@ module cubic_cov_d1 #(
   localparam signed [27:0] C1 =  28'sd89640122;    //  5.34297 * 2^24
   localparam signed [27:0] C0 = -28'sd81273711;    // -4.84429 * 2^24
 
-  wire [23:0] r_q24 = r_q32[31:8];
+  wire [24:0] r_q24 = r_q32[DATA_WIDTH:8];
 
   // Stage 1 signals
-  wire [47:0] r2_full;
-  wire [23:0] r2_w;
-  reg  [23:0] r_s1, r2_s1;
+  wire [48:0] r2_full;
+  wire [24:0] r2_w;
+  reg  [24:0] r_s1, r2_s1;
 
   // 28 bits * 25 bits = 53 bits
-  wire signed [52:0] mac2_full, mac3_full, mac4_full;
-  wire signed [27:0] add2_w, add3_w, add4_w;
+  wire signed [53:0] mac2_full, mac3_full, mac4_full;
+  wire signed [28:0] add2_w, add3_w, add4_w;
   
-  reg  signed [27:0] add2_q, add3_q;
-  reg  [23:0] r_s2, r2_s2, r_s3;
+  reg  signed [28:0] add2_q, add3_q;
+  reg  [24:0] r_s2, r2_s2, r_s3;
 
   // -------------------------
   // Stage 1: r2 = r*r
   // -------------------------
   assign r2_full = r_q24 * r_q24; 
-  assign r2_w    = r2_full[47:24];
+  assign r2_w    = r2_full[48:24];
 
   // -------------------------
   // Stage 2: s1 = C5*r2 + C3

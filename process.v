@@ -6,7 +6,7 @@ module process #(
   parameter integer PIPE_LAT     = CORDIC_ITER + 19,
   parameter integer NORMAL_DEALY = CORDIC_ITER + 10,
   parameter integer ORI_NUM      = 8,
-  parameter integer INT_NUM      = 35,
+  parameter integer INT_NUM      = 45,
   parameter integer LAY_NUM      = 5
 )(
   input  wire                        aclk,
@@ -35,7 +35,7 @@ module process #(
 
   reg [1:0] state, next_state;
 
-  reg [5:0]                  weight_idx, next_weight_idx;
+  reg [6:0]                  weight_idx, next_weight_idx;
   reg [DATA_WIDTH*LANES-1:0] weight [0:3*ORI_NUM+INT_NUM-LAY_NUM+2];
   reg [31:0]       mat [0:11];
   reg [3:0]                  mat_idx, next_mat_idx;
@@ -180,10 +180,10 @@ module process #(
       input_count <= 0;
   end
 
-  wire signed [DATA_WIDTH-1:0] normalize_x, normalize_y, normalize_z;
-  reg  signed [DATA_WIDTH-1:0] normalize_x_r [0:NORMAL_DEALY-1];
-  reg  signed [DATA_WIDTH-1:0] normalize_y_r [0:NORMAL_DEALY-1];
-  reg  signed [DATA_WIDTH-1:0] normalize_z_r [0:NORMAL_DEALY-1];
+  wire signed [DATA_WIDTH:0] normalize_x, normalize_y, normalize_z;
+  reg  signed [DATA_WIDTH:0] normalize_x_r [0:NORMAL_DEALY-1];
+  reg  signed [DATA_WIDTH:0] normalize_y_r [0:NORMAL_DEALY-1];
+  reg  signed [DATA_WIDTH:0] normalize_z_r [0:NORMAL_DEALY-1];
 
   reg  signed [DATA_WIDTH-1:0] ori_x [0: ORI_NUM-1];
   reg  signed [DATA_WIDTH-1:0] ori_y [0: ORI_NUM-1]; 
@@ -305,7 +305,7 @@ module process #(
   reg signed [63:0] temp_answer_1 [0:INT_NUM-LAY_NUM-1];
   reg signed [63:0] temp_answer_2 [0:2];
   reg signed [47:0] answer        [0:WEIGHT_NUM-1];
-  reg signed [47:0] answer_r      [0:WEIGHT_NUM-1];
+  reg signed [47:0] answer_r      [0:71];
 
   // orientation
   always @(*) begin
@@ -339,14 +339,14 @@ module process #(
 
   always @(posedge aclk or negedge aresetn) begin
     if(!aresetn)
-      for(i = 0; i < WEIGHT_NUM; i = i + 1)
+      for(i = 0; i < 72; i = i + 1)
         answer_r[i] <= 0;
     else
       for(i = 0; i < WEIGHT_NUM; i = i + 1)
         answer_r[i] <= answer[i];
   end
 
-  reg signed [48:0] add_temp [0:18];
+  reg signed [48:0] add_temp [0:22];
   reg signed [49:0] field;
   reg signed [15:0] out;
 
@@ -365,20 +365,23 @@ module process #(
     add_temp[11] <= $signed(answer_r[44] + answer_r[45]) + $signed(answer_r[46] + answer_r[47]);
     add_temp[12] <= $signed(answer_r[48] + answer_r[49]) + $signed(answer_r[50] + answer_r[51]);
     add_temp[13] <= $signed(answer_r[52] + answer_r[53]) + $signed(answer_r[54] + answer_r[55]);
-    add_temp[14] <= $signed(answer_r[56]); // + answer_r[57]) + $signed(answer_r[58] + answer_r[59]);
-    // add_temp[15] <= $signed(answer_r[60] + answer_r[61]) + $signed(answer_r[62] + answer_r[63]);
+    add_temp[14] <= $signed(answer_r[56] + answer_r[57]) + $signed(answer_r[58] + answer_r[59]);
+    add_temp[15] <= $signed(answer_r[60] + answer_r[61]) + $signed(answer_r[62] + answer_r[63]);
+    add_temp[16] <= $signed(answer_r[64] + answer_r[65]) + $signed(answer_r[66] + answer_r[67]);
+    add_temp[17] <= $signed(answer_r[68] + answer_r[69]) + $signed(answer_r[70] + answer_r[71]);
 
-    add_temp[15] <= $signed(add_temp[ 0] + add_temp[ 1]) + $signed(add_temp[ 2] + add_temp[ 3]);
-    add_temp[16] <= $signed(add_temp[ 4] + add_temp[ 5]) + $signed(add_temp[ 6] + add_temp[ 7]);
-    add_temp[17] <= $signed(add_temp[ 8] + add_temp[ 9]) + $signed(add_temp[10] + add_temp[11]);
-    add_temp[18] <= $signed(add_temp[12] + add_temp[13]) + $signed(add_temp[14]); // + add_temp[15]);
+    add_temp[18] <= $signed(add_temp[ 0] + add_temp[ 1]) + $signed(add_temp[ 2] + add_temp[ 3]);
+    add_temp[19] <= $signed(add_temp[ 4] + add_temp[ 5]) + $signed(add_temp[ 6] + add_temp[ 7]);
+    add_temp[20] <= $signed(add_temp[ 8] + add_temp[ 9]) + $signed(add_temp[10] + add_temp[11]);
+    add_temp[21] <= $signed(add_temp[12] + add_temp[13]) + $signed(add_temp[14] + add_temp[15]);
+    add_temp[22] <= $signed(add_temp[16] + add_temp[17]);
 
-    field <= $signed(add_temp[15] + add_temp[16]) + $signed(add_temp[17] + add_temp[18]);
+    field <= $signed(add_temp[18] + add_temp[19]) + $signed(add_temp[20] + add_temp[21]) + $signed(add_temp[22]);
 
     out <= field[33:18];
   end
 
-  // reg [32:0] layer1, layer2, layer3, layer4, layer5;
+  // reg [50:0] layer1, layer2, layer3, layer4, layer5;
   // always @(posedge aclk) begin
   //   if (input_count == PIPE_LAT + ORI_NUM + INT_NUM)
   //     layer1 <= field;
@@ -395,17 +398,17 @@ module process #(
   // reg [7:0] label;
   // always @(posedge aclk) begin
   //   if ($signed(field) <= $signed(layer1))
-  //     label <= 6;
-  //   else if ($signed(field) <= $signed(layer2))
   //     label <= 5;
-  //   else if ($signed(field) <= $signed(layer3))
+  //   else if ($signed(field) <= $signed(layer2))
   //     label <= 4;
-  //   else if ($signed(field) <= $signed(layer4))
+  //   else if ($signed(field) <= $signed(layer3))
   //     label <= 3;
-  //   else if ($signed(field) <= $signed(layer5))
+  //   else if ($signed(field) <= $signed(layer4))
   //     label <= 2;
-  //   else
+  //   else if ($signed(field) <= $signed(layer5))
   //     label <= 1;
+  //   else
+  //     label <= 0;
   // end
 
   reg [31:0] target_count;
