@@ -26,7 +26,7 @@ module cubic_cov #(
   wire signed [53:0] mac2_full, mac3_full, mac4_full, mac5_full;
   wire signed [28:0] add2_w, add3_w, add4_w, add5_w;
   
-  reg  signed [28:0] add2_q, add3_q, add4_q;
+  (* dont_touch = "yes" *) reg  signed [28:0] add2_q, add3_q, add4_q;
   reg  [24:0] r_s2, r2_s2, r_s3, r2_s3, r2_s4;
 
   // -------------------------
