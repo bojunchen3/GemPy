@@ -49,7 +49,7 @@ module tb;
   
   // clock
   initial aclk = 1'b0;
-  always #5 aclk = ~aclk; // 100MHz
+  always #2.5 aclk = ~aclk; // 200MHz
   
   integer i;
   reg [DATA_WIDTH*4-1:0]     weight_vals [0:WEIGHT_NUM-1];
