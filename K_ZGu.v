@@ -1,7 +1,7 @@
 module K_ZGu #(
   parameter integer WIDTH = 20,
   parameter integer CORDIC_ITER = 12,
-  parameter integer DIFF_DELAY = CORDIC_ITER + 8
+  parameter integer DIFF_DELAY = CORDIC_ITER + 12
 )(
   input  wire                         clk,
   input  wire signed [16:0] ori_x,
@@ -70,4 +70,3 @@ module K_ZGu #(
   assign K_ZGz = K_ZGz_temp;
 
 endmodule
-

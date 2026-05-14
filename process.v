@@ -2,11 +2,12 @@ module process #(
   parameter integer DATA_WIDTH   = 16,
   parameter integer OUT_WIDTH    = 16,
   parameter integer LANES        = 4,
-  parameter integer CORDIC_ITER  = 12,
-  parameter integer PIPE_LAT     = CORDIC_ITER + 19,
-  parameter integer NORMAL_DEALY = CORDIC_ITER + 10,
-  parameter integer ORI_NUM      = 8,
-  parameter integer INT_NUM      = 45,
+  parameter integer CORDIC_ITER  = 10,
+  parameter integer PIPE_LAT     = CORDIC_ITER + 23,
+  parameter integer NORMAL_DEALY = CORDIC_ITER + 14,
+  // Sythesys with 7, 40, 5 but test with 8, 45, 5
+  parameter integer ORI_NUM      = 7,
+  parameter integer INT_NUM      = 40,
   parameter integer LAY_NUM      = 5
 )(
   input  wire                        aclk,
@@ -301,11 +302,18 @@ module process #(
     end
   end
 
+
   reg signed [63:0] temp_answer_0 [0:3*ORI_NUM-1];
   reg signed [63:0] temp_answer_1 [0:INT_NUM-LAY_NUM-1];
   reg signed [63:0] temp_answer_2 [0:2];
-  reg signed [47:0] answer        [0:WEIGHT_NUM-1];
-  reg signed [47:0] answer_r      [0:71];
+  localparam integer ACC_SHIFT      = 13;
+  localparam integer ANSWER_SHIFT   = 16 + ACC_SHIFT;
+  localparam integer ACC_TERM_WIDTH = 35;
+  localparam integer ACC_SUM_WIDTH  = 42;
+  localparam integer OUT_LSB        = 18 - ACC_SHIFT;
+  localparam integer OUT_MSB        = OUT_LSB + OUT_WIDTH - 1;
+  reg signed [ACC_TERM_WIDTH-1:0] answer   [0:WEIGHT_NUM-1];
+  reg signed [ACC_TERM_WIDTH-1:0] answer_r [0:71];
 
   // orientation
   always @(*) begin
@@ -313,9 +321,9 @@ module process #(
       temp_answer_0[            i] = $signed(weight[          i]) * $signed(K_ZGx[i]);
       temp_answer_0[  ORI_NUM + i] = $signed(weight[  ORI_NUM+i]) * $signed(K_ZGy[i]);
       temp_answer_0[2*ORI_NUM + i] = $signed(weight[2*ORI_NUM+i]) * $signed(K_ZGz[i]);
-      answer[          i] = temp_answer_0[            i] >>> 16;
-      answer[  ORI_NUM+i] = temp_answer_0[  ORI_NUM + i] >>> 16;
-      answer[2*ORI_NUM+i] = temp_answer_0[2*ORI_NUM + i] >>> 16;
+      answer[          i] = temp_answer_0[            i] >>> ANSWER_SHIFT;
+      answer[  ORI_NUM+i] = temp_answer_0[  ORI_NUM + i] >>> ANSWER_SHIFT;
+      answer[2*ORI_NUM+i] = temp_answer_0[2*ORI_NUM + i] >>> ANSWER_SHIFT;
     end
   end
 
@@ -323,7 +331,7 @@ module process #(
   always @(*) begin
     for (i = 0; i < INT_NUM - LAY_NUM; i = i + 1) begin
       temp_answer_1[i] = $signed(weight[3*ORI_NUM + i]) * $signed(diff_K_Z[i]);
-      answer[3*ORI_NUM + i] = temp_answer_1[i] >>> 16;
+      answer[3*ORI_NUM + i] = temp_answer_1[i] >>> ANSWER_SHIFT;
     end
   end
 
@@ -332,9 +340,9 @@ module process #(
     temp_answer_2[0] = $signed(weight[WEIGHT_NUM - 3]) * ($signed(normalize_x_r[NORMAL_DEALY-1]) <<< 16);
     temp_answer_2[1] = $signed(weight[WEIGHT_NUM - 2]) * ($signed(normalize_y_r[NORMAL_DEALY-1]) <<< 16);
     temp_answer_2[2] = $signed(weight[WEIGHT_NUM - 1]) * ($signed(normalize_z_r[NORMAL_DEALY-1]) <<< 16);
-    answer[WEIGHT_NUM - 3] = temp_answer_2[0] >>> 16;
-    answer[WEIGHT_NUM - 2] = temp_answer_2[1] >>> 16;
-    answer[WEIGHT_NUM - 1] = temp_answer_2[2] >>> 16;
+    answer[WEIGHT_NUM - 3] = temp_answer_2[0] >>> ANSWER_SHIFT;
+    answer[WEIGHT_NUM - 2] = temp_answer_2[1] >>> ANSWER_SHIFT;
+    answer[WEIGHT_NUM - 1] = temp_answer_2[2] >>> ANSWER_SHIFT;
   end
 
   always @(posedge aclk or negedge aresetn) begin
@@ -346,29 +354,36 @@ module process #(
         answer_r[i] <= answer[i];
   end
 
-  reg signed [48:0] add_temp [0:22];
-  reg signed [49:0] field;
+  reg signed [ACC_SUM_WIDTH-1:0] add_temp [0:22];
+  reg signed [ACC_SUM_WIDTH-1:0] field;
   reg signed [15:0] out;
 
+  function signed [ACC_SUM_WIDTH-1:0] acc_term;
+    input signed [ACC_TERM_WIDTH-1:0] value;
+    begin
+      acc_term = value;
+    end
+  endfunction
+
   always @(posedge aclk) begin
-    add_temp[ 0] <= $signed(answer_r[ 0] + answer_r[ 1]) + $signed(answer_r[ 2] + answer_r[ 3]);
-    add_temp[ 1] <= $signed(answer_r[ 4] + answer_r[ 5]) + $signed(answer_r[ 6] + answer_r[ 7]);
-    add_temp[ 2] <= $signed(answer_r[ 8] + answer_r[ 9]) + $signed(answer_r[10] + answer_r[11]);
-    add_temp[ 3] <= $signed(answer_r[12] + answer_r[13]) + $signed(answer_r[14] + answer_r[15]);
-    add_temp[ 4] <= $signed(answer_r[16] + answer_r[17]) + $signed(answer_r[18] + answer_r[19]);
-    add_temp[ 5] <= $signed(answer_r[20] + answer_r[21]) + $signed(answer_r[22] + answer_r[23]);
-    add_temp[ 6] <= $signed(answer_r[24] + answer_r[25]) + $signed(answer_r[26] + answer_r[27]);
-    add_temp[ 7] <= $signed(answer_r[28] + answer_r[29]) + $signed(answer_r[30] + answer_r[31]);
-    add_temp[ 8] <= $signed(answer_r[32] + answer_r[33]) + $signed(answer_r[34] + answer_r[35]);
-    add_temp[ 9] <= $signed(answer_r[36] + answer_r[37]) + $signed(answer_r[38] + answer_r[39]);
-    add_temp[10] <= $signed(answer_r[40] + answer_r[41]) + $signed(answer_r[42] + answer_r[43]);
-    add_temp[11] <= $signed(answer_r[44] + answer_r[45]) + $signed(answer_r[46] + answer_r[47]);
-    add_temp[12] <= $signed(answer_r[48] + answer_r[49]) + $signed(answer_r[50] + answer_r[51]);
-    add_temp[13] <= $signed(answer_r[52] + answer_r[53]) + $signed(answer_r[54] + answer_r[55]);
-    add_temp[14] <= $signed(answer_r[56] + answer_r[57]) + $signed(answer_r[58] + answer_r[59]);
-    add_temp[15] <= $signed(answer_r[60] + answer_r[61]) + $signed(answer_r[62] + answer_r[63]);
-    add_temp[16] <= $signed(answer_r[64] + answer_r[65]) + $signed(answer_r[66] + answer_r[67]);
-    add_temp[17] <= $signed(answer_r[68] + answer_r[69]) + $signed(answer_r[70] + answer_r[71]);
+    add_temp[ 0] <= acc_term(answer_r[ 0]) + acc_term(answer_r[ 1]) + acc_term(answer_r[ 2]) + acc_term(answer_r[ 3]);
+    add_temp[ 1] <= acc_term(answer_r[ 4]) + acc_term(answer_r[ 5]) + acc_term(answer_r[ 6]) + acc_term(answer_r[ 7]);
+    add_temp[ 2] <= acc_term(answer_r[ 8]) + acc_term(answer_r[ 9]) + acc_term(answer_r[10]) + acc_term(answer_r[11]);
+    add_temp[ 3] <= acc_term(answer_r[12]) + acc_term(answer_r[13]) + acc_term(answer_r[14]) + acc_term(answer_r[15]);
+    add_temp[ 4] <= acc_term(answer_r[16]) + acc_term(answer_r[17]) + acc_term(answer_r[18]) + acc_term(answer_r[19]);
+    add_temp[ 5] <= acc_term(answer_r[20]) + acc_term(answer_r[21]) + acc_term(answer_r[22]) + acc_term(answer_r[23]);
+    add_temp[ 6] <= acc_term(answer_r[24]) + acc_term(answer_r[25]) + acc_term(answer_r[26]) + acc_term(answer_r[27]);
+    add_temp[ 7] <= acc_term(answer_r[28]) + acc_term(answer_r[29]) + acc_term(answer_r[30]) + acc_term(answer_r[31]);
+    add_temp[ 8] <= acc_term(answer_r[32]) + acc_term(answer_r[33]) + acc_term(answer_r[34]) + acc_term(answer_r[35]);
+    add_temp[ 9] <= acc_term(answer_r[36]) + acc_term(answer_r[37]) + acc_term(answer_r[38]) + acc_term(answer_r[39]);
+    add_temp[10] <= acc_term(answer_r[40]) + acc_term(answer_r[41]) + acc_term(answer_r[42]) + acc_term(answer_r[43]);
+    add_temp[11] <= acc_term(answer_r[44]) + acc_term(answer_r[45]) + acc_term(answer_r[46]) + acc_term(answer_r[47]);
+    add_temp[12] <= acc_term(answer_r[48]) + acc_term(answer_r[49]) + acc_term(answer_r[50]) + acc_term(answer_r[51]);
+    add_temp[13] <= acc_term(answer_r[52]) + acc_term(answer_r[53]) + acc_term(answer_r[54]) + acc_term(answer_r[55]);
+    add_temp[14] <= acc_term(answer_r[56]) + acc_term(answer_r[57]) + acc_term(answer_r[58]) + acc_term(answer_r[59]);
+    add_temp[15] <= acc_term(answer_r[60]) + acc_term(answer_r[61]) + acc_term(answer_r[62]) + acc_term(answer_r[63]);
+    add_temp[16] <= acc_term(answer_r[64]) + acc_term(answer_r[65]) + acc_term(answer_r[66]) + acc_term(answer_r[67]);
+    add_temp[17] <= acc_term(answer_r[68]) + acc_term(answer_r[69]) + acc_term(answer_r[70]) + acc_term(answer_r[71]);
 
     add_temp[18] <= $signed(add_temp[ 0] + add_temp[ 1]) + $signed(add_temp[ 2] + add_temp[ 3]);
     add_temp[19] <= $signed(add_temp[ 4] + add_temp[ 5]) + $signed(add_temp[ 6] + add_temp[ 7]);
@@ -378,38 +393,8 @@ module process #(
 
     field <= $signed(add_temp[18] + add_temp[19]) + $signed(add_temp[20] + add_temp[21]) + $signed(add_temp[22]);
 
-    out <= field[33:18];
+    out <= field[OUT_MSB:OUT_LSB];
   end
-
-  // reg [50:0] layer1, layer2, layer3, layer4, layer5;
-  // always @(posedge aclk) begin
-  //   if (input_count == PIPE_LAT + ORI_NUM + INT_NUM)
-  //     layer1 <= field;
-  //   if (input_count == PIPE_LAT + ORI_NUM + INT_NUM + 1)
-  //     layer2 <= field;
-  //   if (input_count == PIPE_LAT + ORI_NUM + INT_NUM + 2)
-  //     layer3 <= field;
-  //   if (input_count == PIPE_LAT + ORI_NUM + INT_NUM + 3)
-  //     layer4 <= field;
-  //   if (input_count == PIPE_LAT + ORI_NUM + INT_NUM + 4)
-  //     layer5 <= field;
-  // end
-  
-  // reg [7:0] label;
-  // always @(posedge aclk) begin
-  //   if ($signed(field) <= $signed(layer1))
-  //     label <= 5;
-  //   else if ($signed(field) <= $signed(layer2))
-  //     label <= 4;
-  //   else if ($signed(field) <= $signed(layer3))
-  //     label <= 3;
-  //   else if ($signed(field) <= $signed(layer4))
-  //     label <= 2;
-  //   else if ($signed(field) <= $signed(layer5))
-  //     label <= 1;
-  //   else
-  //     label <= 0;
-  // end
 
   reg [31:0] target_count;
 

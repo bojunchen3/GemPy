@@ -4,8 +4,9 @@ module tb;
   localparam OUT_WIDTH  = 16;
   localparam LANES      = 4;
 
-  parameter integer ORI_NUM    = 8;
-  parameter integer INT_NUM    = 45;
+  // Sythesys with 7, 40, 5 but test with 8, 45, 5
+  parameter integer ORI_NUM    = 7;
+  parameter integer INT_NUM    = 40;
   parameter integer LAY_NUM    = 5;
   parameter CAL_NUM       = 3;
   parameter WEIGHT_NUM    = 3*ORI_NUM + INT_NUM - LAY_NUM + 3;
@@ -306,15 +307,15 @@ module tb;
     vec_vals[ORI_NUM+INT_NUM+4][2*DATA_WIDTH-1:   DATA_WIDTH] =  500;
     vec_vals[ORI_NUM+INT_NUM+4][3*DATA_WIDTH-1: 2*DATA_WIDTH] =  920;
 
-    vec_vals[VEC_NUM-3][  DATA_WIDTH-1:            0] = 1450; // input 0
-    vec_vals[VEC_NUM-3][2*DATA_WIDTH-1:   DATA_WIDTH] =    0;
-    vec_vals[VEC_NUM-3][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1950;
-    vec_vals[VEC_NUM-2][  DATA_WIDTH-1:            0] = 1550; // input 1
-    vec_vals[VEC_NUM-2][2*DATA_WIDTH-1:   DATA_WIDTH] =    0;
-    vec_vals[VEC_NUM-2][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1950;
-    vec_vals[VEC_NUM-1][  DATA_WIDTH-1:            0] = 1650; // input 2
-    vec_vals[VEC_NUM-1][2*DATA_WIDTH-1:   DATA_WIDTH] =    0;
-    vec_vals[VEC_NUM-1][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 1950;
+    vec_vals[VEC_NUM-3][  DATA_WIDTH-1:            0] =  25; // input 0
+    vec_vals[VEC_NUM-3][2*DATA_WIDTH-1:   DATA_WIDTH] = 125;
+    vec_vals[VEC_NUM-3][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 575;
+    vec_vals[VEC_NUM-2][  DATA_WIDTH-1:            0] =  75; // input 1
+    vec_vals[VEC_NUM-2][2*DATA_WIDTH-1:   DATA_WIDTH] =  25;
+    vec_vals[VEC_NUM-2][3*DATA_WIDTH-1: 2*DATA_WIDTH] = 275;
+    vec_vals[VEC_NUM-1][  DATA_WIDTH-1:            0] =  75; // input 2
+    vec_vals[VEC_NUM-1][2*DATA_WIDTH-1:   DATA_WIDTH] = 375;
+    vec_vals[VEC_NUM-1][3*DATA_WIDTH-1: 2*DATA_WIDTH] =  75;
 
     for (i=0; i < VEC_NUM; i=i+1) begin
       vec_vals[i] = vec_vals[i] <<< 5;
